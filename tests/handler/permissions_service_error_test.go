@@ -3,20 +3,19 @@ package handler_test
 import (
 	"encoding/json"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/valyala/fasthttp"
 	"github.com/vwency/resilient-scatter-gather/internal/handler"
 	"github.com/vwency/resilient-scatter-gather/internal/models"
 	pb_user "github.com/vwency/resilient-scatter-gather/proto/user"
 	pb_vector "github.com/vwency/resilient-scatter-gather/proto/vector"
 )
 
-func TestServeHTTP_PermissionsServiceError_ReturnsInternalServerError(t *testing.T) {
+func TestHandle_PermissionsServiceError_ReturnsInternalServerError(t *testing.T) {
 	mockUser := new(UserService)
 	mockPermissions := new(PermissionsService)
 	mockVector := new(VectorMemoryService)
@@ -31,24 +30,25 @@ func TestServeHTTP_PermissionsServiceError_ReturnsInternalServerError(t *testing
 
 	h := handler.NewChatSummaryHandler(mockUser, mockVector, mockPermissions, 200*time.Millisecond)
 
-	req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat1", nil)
-	w := httptest.NewRecorder()
+	ctx := &fasthttp.RequestCtx{}
+	ctx.QueryArgs().Add("user_id", "user123")
+	ctx.QueryArgs().Add("chat_id", "chat1")
 
-	h.ServeHTTP(w, req)
+	h.Handle(ctx)
 
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, fasthttp.StatusInternalServerError, ctx.Response.StatusCode())
 
 	var errResponse models.ErrorResponse
-	err := json.NewDecoder(w.Body).Decode(&errResponse)
+	err := json.Unmarshal(ctx.Response.Body(), &errResponse)
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusInternalServerError, errResponse.Code)
+	assert.Equal(t, fasthttp.StatusInternalServerError, errResponse.Code)
 	assert.Contains(t, errResponse.Message, "permissions")
 
 	mockUser.AssertExpectations(t)
 	mockPermissions.AssertExpectations(t)
 }
 
-func TestServeHTTP_PermissionsServiceError_DatabaseFailure(t *testing.T) {
+func TestHandle_PermissionsServiceError_DatabaseFailure(t *testing.T) {
 	mockUser := new(UserService)
 	mockPermissions := new(PermissionsService)
 	mockVector := new(VectorMemoryService)
@@ -75,12 +75,13 @@ func TestServeHTTP_PermissionsServiceError_DatabaseFailure(t *testing.T) {
 
 	h := handler.NewChatSummaryHandler(mockUser, mockVector, mockPermissions, 200*time.Millisecond)
 
-	req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat1", nil)
-	w := httptest.NewRecorder()
+	ctx := &fasthttp.RequestCtx{}
+	ctx.QueryArgs().Add("user_id", "user123")
+	ctx.QueryArgs().Add("chat_id", "chat1")
 
-	h.ServeHTTP(w, req)
+	h.Handle(ctx)
 
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, fasthttp.StatusInternalServerError, ctx.Response.StatusCode())
 
 	mockUser.AssertExpectations(t)
 	mockPermissions.AssertExpectations(t)

@@ -3,14 +3,13 @@ package handler_test
 import (
 	"encoding/json"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/valyala/fasthttp"
 	"github.com/vwency/resilient-scatter-gather/internal/handler"
 	"github.com/vwency/resilient-scatter-gather/internal/models"
 	pb_permissions "github.com/vwency/resilient-scatter-gather/proto/permissions"
@@ -18,7 +17,7 @@ import (
 	pb_vector "github.com/vwency/resilient-scatter-gather/proto/vector"
 )
 
-func TestServeHTTP_MultipleConcurrentRequests_AllSucceed(t *testing.T) {
+func TestHandle_MultipleConcurrentRequests_AllSucceed(t *testing.T) {
 	mockUser := new(UserService)
 	mockPermissions := new(PermissionsService)
 	mockVector := new(VectorMemoryService)
@@ -50,23 +49,24 @@ func TestServeHTTP_MultipleConcurrentRequests_AllSucceed(t *testing.T) {
 		go func(index int) {
 			defer wg.Done()
 
-			req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat1", nil)
-			w := httptest.NewRecorder()
+			ctx := &fasthttp.RequestCtx{}
+			ctx.QueryArgs().Add("user_id", "user123")
+			ctx.QueryArgs().Add("chat_id", "chat1")
 
-			h.ServeHTTP(w, req)
+			h.Handle(ctx)
 
-			results[index] = w.Code
+			results[index] = ctx.Response.StatusCode()
 		}(i)
 	}
 
 	wg.Wait()
 
 	for i, code := range results {
-		assert.Equal(t, http.StatusOK, code, "Request %d failed", i)
+		assert.Equal(t, fasthttp.StatusOK, code, "Request %d failed", i)
 	}
 }
 
-func TestServeHTTP_ConcurrentRequestsWithDegradation_HandleCorrectly(t *testing.T) {
+func TestHandle_ConcurrentRequestsWithDegradation_HandleCorrectly(t *testing.T) {
 	mockUser := new(UserService)
 	mockPermissions := new(PermissionsService)
 	mockVector := new(VectorMemoryService)
@@ -96,14 +96,15 @@ func TestServeHTTP_ConcurrentRequestsWithDegradation_HandleCorrectly(t *testing.
 		go func() {
 			defer wg.Done()
 
-			req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat1", nil)
-			w := httptest.NewRecorder()
+			ctx := &fasthttp.RequestCtx{}
+			ctx.QueryArgs().Add("user_id", "user123")
+			ctx.QueryArgs().Add("chat_id", "chat1")
 
-			h.ServeHTTP(w, req)
+			h.Handle(ctx)
 
-			if w.Code == http.StatusOK {
+			if ctx.Response.StatusCode() == fasthttp.StatusOK {
 				var response models.ChatSummaryResponse
-				json.NewDecoder(w.Body).Decode(&response)
+				json.Unmarshal(ctx.Response.Body(), &response)
 				if response.Degraded {
 					mu.Lock()
 					degradedCount++
@@ -118,7 +119,7 @@ func TestServeHTTP_ConcurrentRequestsWithDegradation_HandleCorrectly(t *testing.
 	assert.Equal(t, numRequests, degradedCount)
 }
 
-func TestServeHTTP_ConcurrentRequestsMixedScenarios_HandleCorrectly(t *testing.T) {
+func TestHandle_ConcurrentRequestsMixedScenarios_HandleCorrectly(t *testing.T) {
 	mockUser := new(UserService)
 	mockPermissions := new(PermissionsService)
 	mockVector := new(VectorMemoryService)
@@ -148,23 +149,25 @@ func TestServeHTTP_ConcurrentRequestsMixedScenarios_HandleCorrectly(t *testing.T
 
 	go func() {
 		defer wg.Done()
-		req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat1", nil)
-		w := httptest.NewRecorder()
-		h.ServeHTTP(w, req)
+		ctx := &fasthttp.RequestCtx{}
+		ctx.QueryArgs().Add("user_id", "user123")
+		ctx.QueryArgs().Add("chat_id", "chat1")
+		h.Handle(ctx)
 
 		var response models.ChatSummaryResponse
-		json.NewDecoder(w.Body).Decode(&response)
+		json.Unmarshal(ctx.Response.Body(), &response)
 		results[0] = !response.Degraded
 	}()
 
 	go func() {
 		defer wg.Done()
-		req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat2", nil)
-		w := httptest.NewRecorder()
-		h.ServeHTTP(w, req)
+		ctx := &fasthttp.RequestCtx{}
+		ctx.QueryArgs().Add("user_id", "user123")
+		ctx.QueryArgs().Add("chat_id", "chat2")
+		h.Handle(ctx)
 
 		var response models.ChatSummaryResponse
-		json.NewDecoder(w.Body).Decode(&response)
+		json.Unmarshal(ctx.Response.Body(), &response)
 		results[1] = response.Degraded
 	}()
 

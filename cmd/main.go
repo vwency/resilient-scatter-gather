@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/valyala/fasthttp"
 	"github.com/vwency/resilient-scatter-gather/internal/handler"
 	"github.com/vwency/resilient-scatter-gather/internal/services"
 	"github.com/vwency/resilient-scatter-gather/pkg/config"
@@ -76,13 +76,19 @@ func main() {
 		slaTimeout,
 	)
 
-	mux := http.NewServeMux()
-	mux.Handle("/api/v1/chat/summary", chatSummaryHandler)
-	mux.HandleFunc("/health", healthCheckHandler)
+	router := func(ctx *fasthttp.RequestCtx) {
+		switch string(ctx.Path()) {
+		case "/api/v1/chat/summary":
+			chatSummaryHandler.Handle(ctx)
+		case "/health":
+			healthCheckHandler(ctx)
+		default:
+			ctx.SetStatusCode(fasthttp.StatusNotFound)
+		}
+	}
 
-	httpServer := &http.Server{
-		Addr:         fmt.Sprintf(":%s", cfg.App.Port),
-		Handler:      mux,
+	server := &fasthttp.Server{
+		Handler:      router,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
@@ -97,21 +103,21 @@ func main() {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
-		if err := httpServer.Shutdown(shutdownCtx); err != nil {
-			log.Printf("HTTP server shutdown error: %v", err)
-		}
+		_ = server.ShutdownWithContext(shutdownCtx)
 	}()
 
-	log.Printf("%s starting on :%s (SLA: %dms)", cfg.App.ServiceName, cfg.App.Port, cfg.SLA.MaxResponseTimeMs)
-	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	addr := fmt.Sprintf(":%s", cfg.App.Port)
+	log.Printf("%s starting on %s (SLA: %dms)", cfg.App.ServiceName, addr, cfg.SLA.MaxResponseTimeMs)
+
+	if err := server.ListenAndServe(addr); err != nil {
 		log.Fatalf("HTTP server failed: %v", err)
 	}
 
 	log.Println("Server stopped")
 }
 
-func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"status":"healthy","timestamp":"%s"}`, time.Now().Format(time.RFC3339))
+func healthCheckHandler(ctx *fasthttp.RequestCtx) {
+	ctx.SetContentType("application/json")
+	ctx.SetStatusCode(fasthttp.StatusOK)
+	fmt.Fprintf(ctx, `{"status":"healthy","timestamp":"%s"}`, time.Now().Format(time.RFC3339))
 }

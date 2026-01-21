@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
+	"github.com/valyala/fasthttp"
 	"github.com/vwency/resilient-scatter-gather/internal/models"
 	"github.com/vwency/resilient-scatter-gather/internal/services"
 	pb_permissions "github.com/vwency/resilient-scatter-gather/proto/permissions"
@@ -44,27 +44,27 @@ type serviceResult struct {
 	serviceName     string
 }
 
-func (h *ChatSummaryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), h.slaTimeout)
+func (h *ChatSummaryHandler) Handle(ctx *fasthttp.RequestCtx) {
+	reqCtx, cancel := context.WithTimeout(context.Background(), h.slaTimeout)
 	defer cancel()
 
-	userID := r.URL.Query().Get("user_id")
-	chatID := r.URL.Query().Get("chat_id")
+	userID := string(ctx.QueryArgs().Peek("user_id"))
+	chatID := string(ctx.QueryArgs().Peek("chat_id"))
 
 	if userID == "" || chatID == "" {
-		h.sendError(w, "user_id and chat_id are required", http.StatusBadRequest)
+		h.sendError(ctx, "user_id and chat_id are required", fasthttp.StatusBadRequest)
 		return
 	}
 
 	start := time.Now()
-	userData, permissionsData, contextData, degraded, err := h.scatterGather(ctx, userID, chatID)
+	userData, permissionsData, contextData, degraded, err := h.scatterGather(reqCtx, userID, chatID)
 	elapsed := time.Since(start)
 
 	log.Printf("Request completed in %v (degraded: %v)", elapsed, degraded)
 
 	if err != nil {
 		log.Printf("Critical service failure: %v", err)
-		h.sendError(w, fmt.Sprintf("Service unavailable: %v", err), http.StatusInternalServerError)
+		h.sendError(ctx, fmt.Sprintf("Service unavailable: %v", err), fasthttp.StatusInternalServerError)
 		return
 	}
 
@@ -76,7 +76,7 @@ func (h *ChatSummaryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Timestamp:   time.Now(),
 	}
 
-	h.sendJSON(w, response, http.StatusOK)
+	h.sendJSON(ctx, response, fasthttp.StatusOK)
 }
 
 func (h *ChatSummaryHandler) scatterGather(ctx context.Context, userID, chatID string) (
@@ -166,20 +166,25 @@ func (h *ChatSummaryHandler) scatterGather(ctx context.Context, userID, chatID s
 	return userData, permissionsData, contextData, degraded, nil
 }
 
-func (h *ChatSummaryHandler) sendJSON(w http.ResponseWriter, data interface{}, statusCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
+func (h *ChatSummaryHandler) sendJSON(ctx *fasthttp.RequestCtx, data interface{}, statusCode int) {
+	ctx.Response.Header.SetContentType("application/json")
+	ctx.Response.SetStatusCode(statusCode)
 
-	if err := json.NewEncoder(w).Encode(data); err != nil {
+	body, err := json.Marshal(data)
+	if err != nil {
 		log.Printf("Error encoding JSON: %v", err)
+		ctx.Response.SetStatusCode(fasthttp.StatusInternalServerError)
+		return
 	}
+
+	ctx.Response.SetBody(body)
 }
 
-func (h *ChatSummaryHandler) sendError(w http.ResponseWriter, message string, statusCode int) {
+func (h *ChatSummaryHandler) sendError(ctx *fasthttp.RequestCtx, message string, statusCode int) {
 	errResp := &models.ErrorResponse{
-		Error:   http.StatusText(statusCode),
+		Error:   fasthttp.StatusMessage(statusCode),
 		Code:    statusCode,
 		Message: message,
 	}
-	h.sendJSON(w, errResp, statusCode)
+	h.sendJSON(ctx, errResp, statusCode)
 }
