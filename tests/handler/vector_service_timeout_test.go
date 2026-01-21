@@ -3,19 +3,20 @@ package handler_test
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/valyala/fasthttp"
 	"github.com/vwency/resilient-scatter-gather/internal/handler"
 	"github.com/vwency/resilient-scatter-gather/internal/models"
 	pb_permissions "github.com/vwency/resilient-scatter-gather/proto/permissions"
 	pb_user "github.com/vwency/resilient-scatter-gather/proto/user"
 )
 
-func TestHandle_VectorServiceTimeout_ReturnsSuccessWithDegradation(t *testing.T) {
+func TestServeHTTP_VectorServiceTimeout_ReturnsSuccessWithDegradation(t *testing.T) {
 	mockUser := new(UserService)
 	mockPermissions := new(PermissionsService)
 	mockVector := new(VectorMemoryService)
@@ -36,16 +37,15 @@ func TestHandle_VectorServiceTimeout_ReturnsSuccessWithDegradation(t *testing.T)
 
 	h := handler.NewChatSummaryHandler(mockUser, mockVector, mockPermissions, 200*time.Millisecond)
 
-	ctx := &fasthttp.RequestCtx{}
-	ctx.QueryArgs().Add("user_id", "user123")
-	ctx.QueryArgs().Add("chat_id", "chat1")
+	req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat1", nil)
+	w := httptest.NewRecorder()
 
-	h.Handle(ctx)
+	h.ServeHTTP(w, req)
 
-	assert.Equal(t, fasthttp.StatusOK, ctx.Response.StatusCode())
+	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response models.ChatSummaryResponse
-	err := json.Unmarshal(ctx.Response.Body(), &response)
+	err := json.NewDecoder(w.Body).Decode(&response)
 	assert.NoError(t, err)
 	assert.NotNil(t, response.User)
 	assert.NotNil(t, response.Permissions)
@@ -56,7 +56,7 @@ func TestHandle_VectorServiceTimeout_ReturnsSuccessWithDegradation(t *testing.T)
 	mockPermissions.AssertExpectations(t)
 }
 
-func TestHandle_VectorServiceExceedsSLA_StillReturnsWithinSLA(t *testing.T) {
+func TestServeHTTP_VectorServiceExceedsSLA_StillReturnsWithinSLA(t *testing.T) {
 	mockUser := new(UserService)
 	mockPermissions := new(PermissionsService)
 	mockVector := new(VectorMemoryService)
@@ -83,19 +83,18 @@ func TestHandle_VectorServiceExceedsSLA_StillReturnsWithinSLA(t *testing.T) {
 
 	h := handler.NewChatSummaryHandler(mockUser, mockVector, mockPermissions, 200*time.Millisecond)
 
-	ctx := &fasthttp.RequestCtx{}
-	ctx.QueryArgs().Add("user_id", "user123")
-	ctx.QueryArgs().Add("chat_id", "chat1")
+	req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat1", nil)
+	w := httptest.NewRecorder()
 
 	start := time.Now()
-	h.Handle(ctx)
+	h.ServeHTTP(w, req)
 	elapsed := time.Since(start)
 
-	assert.Equal(t, fasthttp.StatusOK, ctx.Response.StatusCode())
+	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Less(t, elapsed, 250*time.Millisecond)
 
 	var response models.ChatSummaryResponse
-	err := json.Unmarshal(ctx.Response.Body(), &response)
+	err := json.NewDecoder(w.Body).Decode(&response)
 	assert.NoError(t, err)
 	assert.True(t, response.Degraded)
 

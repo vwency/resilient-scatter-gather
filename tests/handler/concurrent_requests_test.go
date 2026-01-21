@@ -3,13 +3,14 @@ package handler_test
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/valyala/fasthttp"
 	"github.com/vwency/resilient-scatter-gather/internal/handler"
 	"github.com/vwency/resilient-scatter-gather/internal/models"
 	pb_permissions "github.com/vwency/resilient-scatter-gather/proto/permissions"
@@ -17,7 +18,7 @@ import (
 	pb_vector "github.com/vwency/resilient-scatter-gather/proto/vector"
 )
 
-func TestHandle_MultipleConcurrentRequests_AllSucceed(t *testing.T) {
+func TestServeHTTP_MultipleConcurrentRequests_AllSucceed(t *testing.T) {
 	mockUser := new(UserService)
 	mockPermissions := new(PermissionsService)
 	mockVector := new(VectorMemoryService)
@@ -49,24 +50,23 @@ func TestHandle_MultipleConcurrentRequests_AllSucceed(t *testing.T) {
 		go func(index int) {
 			defer wg.Done()
 
-			ctx := &fasthttp.RequestCtx{}
-			ctx.QueryArgs().Add("user_id", "user123")
-			ctx.QueryArgs().Add("chat_id", "chat1")
+			req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat1", nil)
+			w := httptest.NewRecorder()
 
-			h.Handle(ctx)
+			h.ServeHTTP(w, req)
 
-			results[index] = ctx.Response.StatusCode()
+			results[index] = w.Code
 		}(i)
 	}
 
 	wg.Wait()
 
 	for i, code := range results {
-		assert.Equal(t, fasthttp.StatusOK, code, "Request %d failed", i)
+		assert.Equal(t, http.StatusOK, code, "Request %d failed", i)
 	}
 }
 
-func TestHandle_ConcurrentRequestsWithDegradation_HandleCorrectly(t *testing.T) {
+func TestServeHTTP_ConcurrentRequestsWithDegradation_HandleCorrectly(t *testing.T) {
 	mockUser := new(UserService)
 	mockPermissions := new(PermissionsService)
 	mockVector := new(VectorMemoryService)
@@ -96,15 +96,14 @@ func TestHandle_ConcurrentRequestsWithDegradation_HandleCorrectly(t *testing.T) 
 		go func() {
 			defer wg.Done()
 
-			ctx := &fasthttp.RequestCtx{}
-			ctx.QueryArgs().Add("user_id", "user123")
-			ctx.QueryArgs().Add("chat_id", "chat1")
+			req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat1", nil)
+			w := httptest.NewRecorder()
 
-			h.Handle(ctx)
+			h.ServeHTTP(w, req)
 
-			if ctx.Response.StatusCode() == fasthttp.StatusOK {
+			if w.Code == http.StatusOK {
 				var response models.ChatSummaryResponse
-				json.Unmarshal(ctx.Response.Body(), &response)
+				json.NewDecoder(w.Body).Decode(&response)
 				if response.Degraded {
 					mu.Lock()
 					degradedCount++
@@ -119,7 +118,7 @@ func TestHandle_ConcurrentRequestsWithDegradation_HandleCorrectly(t *testing.T) 
 	assert.Equal(t, numRequests, degradedCount)
 }
 
-func TestHandle_ConcurrentRequestsMixedScenarios_HandleCorrectly(t *testing.T) {
+func TestServeHTTP_ConcurrentRequestsMixedScenarios_HandleCorrectly(t *testing.T) {
 	mockUser := new(UserService)
 	mockPermissions := new(PermissionsService)
 	mockVector := new(VectorMemoryService)
@@ -149,25 +148,23 @@ func TestHandle_ConcurrentRequestsMixedScenarios_HandleCorrectly(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		ctx := &fasthttp.RequestCtx{}
-		ctx.QueryArgs().Add("user_id", "user123")
-		ctx.QueryArgs().Add("chat_id", "chat1")
-		h.Handle(ctx)
+		req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat1", nil)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
 
 		var response models.ChatSummaryResponse
-		json.Unmarshal(ctx.Response.Body(), &response)
+		json.NewDecoder(w.Body).Decode(&response)
 		results[0] = !response.Degraded
 	}()
 
 	go func() {
 		defer wg.Done()
-		ctx := &fasthttp.RequestCtx{}
-		ctx.QueryArgs().Add("user_id", "user123")
-		ctx.QueryArgs().Add("chat_id", "chat2")
-		h.Handle(ctx)
+		req := httptest.NewRequest("GET", "/api/chat-summary?user_id=user123&chat_id=chat2", nil)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
 
 		var response models.ChatSummaryResponse
-		json.Unmarshal(ctx.Response.Body(), &response)
+		json.NewDecoder(w.Body).Decode(&response)
 		results[1] = response.Degraded
 	}()
 

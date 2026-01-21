@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/valyala/fasthttp"
 	"github.com/vwency/resilient-scatter-gather/internal/handler"
 	"github.com/vwency/resilient-scatter-gather/internal/services"
 	"github.com/vwency/resilient-scatter-gather/pkg/config"
@@ -76,19 +76,13 @@ func main() {
 		slaTimeout,
 	)
 
-	router := func(ctx *fasthttp.RequestCtx) {
-		switch string(ctx.Path()) {
-		case "/api/v1/chat/summary":
-			chatSummaryHandler.Handle(ctx)
-		case "/health":
-			healthCheckHandler(ctx)
-		default:
-			ctx.SetStatusCode(fasthttp.StatusNotFound)
-		}
-	}
+	mux := http.NewServeMux()
+	mux.Handle("/api/v1/chat/summary", chatSummaryHandler)
+	mux.HandleFunc("/health", healthCheckHandler)
 
-	server := &fasthttp.Server{
-		Handler:      router,
+	httpServer := &http.Server{
+		Addr:         fmt.Sprintf(":%s", cfg.App.Port),
+		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
@@ -103,21 +97,23 @@ func main() {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
-		_ = server.ShutdownWithContext(shutdownCtx)
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			log.Printf("HTTP server shutdown error: %v", err)
+		}
 	}()
 
 	addr := fmt.Sprintf(":%s", cfg.App.Port)
 	log.Printf("%s starting on %s (SLA: %dms)", cfg.App.ServiceName, addr, cfg.TTL.MaxResponseTimeMs)
 
-	if err := server.ListenAndServe(addr); err != nil {
+	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("HTTP server failed: %v", err)
 	}
 
 	log.Println("Server stopped")
 }
 
-func healthCheckHandler(ctx *fasthttp.RequestCtx) {
-	ctx.SetContentType("application/json")
-	ctx.SetStatusCode(fasthttp.StatusOK)
-	fmt.Fprintf(ctx, `{"status":"healthy","timestamp":"%s"}`, time.Now().Format(time.RFC3339))
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"status":"healthy","timestamp":"%s"}`, time.Now().Format(time.RFC3339))
 }
