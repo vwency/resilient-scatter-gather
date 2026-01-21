@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package vector;
+
+option go_package = "github.com/vwency/resilient-scatter-gather/proto/vector";
+
+service VectorMemoryService {
+  rpc GetContext(GetContextRequest) returns (GetContextResponse);
+}
+
+message GetContextRequest {
+  string chat_id = 1;
+  int32 limit = 2;
+}
+
+message GetContextResponse {
+  repeated ContextItem items = 1;
+  int32 total_count = 2;
+}
+
+message ContextItem {
+  string message_id = 1;
+  string content = 2;
+  double relevance_score = 3;
+  int64 timestamp = 4;
+}

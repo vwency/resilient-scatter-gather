@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package permissions;
+
+option go_package = "github.com/vwency/resilient-scatter-gather/proto/permissions";
+
+service PermissionsService {
+  rpc CheckAccess(CheckAccessRequest) returns (CheckAccessResponse);
+}
+
+message CheckAccessRequest {
+  string user_id = 1;
+  string resource_id = 2;
+  string action = 3;
+}
+
+message CheckAccessResponse {
+  bool allowed = 1;
+  repeated string permissions = 2;
+  string reason = 3;
+}

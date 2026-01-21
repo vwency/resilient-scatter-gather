@@ -1,0 +1,133 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/vwency/resilient-scatter-gather/internal/handler"
+	"github.com/vwency/resilient-scatter-gather/internal/services"
+	"github.com/vwency/resilient-scatter-gather/pkg/config"
+	pb_permissions "github.com/vwency/resilient-scatter-gather/proto/permissions"
+	pb_user "github.com/vwency/resilient-scatter-gather/proto/user"
+	pb_vector "github.com/vwency/resilient-scatter-gather/proto/vector"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+func main() {
+	var cfg config.ServiceConfig
+	config.Init(os.Getenv("APP_ENV"), "api_gateway", &cfg)
+
+	ctx := context.Background()
+
+	userConn, err := grpc.NewClient(
+		cfg.Grpc.UserService,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalf("Failed to connect to UserService: %v", err)
+	}
+	defer userConn.Close()
+
+	vectorConn, err := grpc.NewClient(
+		cfg.Grpc.VectorService,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalf("Failed to connect to VectorMemoryService: %v", err)
+	}
+	defer vectorConn.Close()
+
+	permissionsConn, err := grpc.NewClient(
+		cfg.Grpc.PermissionsService,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalf("Failed to connect to PermissionsService: %v", err)
+	}
+	defer permissionsConn.Close()
+
+	userService := services.NewUserServiceClient(
+		pb_user.NewUserServiceClient(userConn),
+		cfg.GetUserDegradationTimeout(),
+	)
+	vectorService := services.NewVectorMemoryServiceClient(
+		pb_vector.NewVectorMemoryServiceClient(vectorConn),
+		cfg.GetVectorDegradationTimeout(),
+	)
+	permissionsService := services.NewPermissionsServiceClient(
+		pb_permissions.NewPermissionsServiceClient(permissionsConn),
+		cfg.GetPermissionsDegradationTimeout(),
+	)
+
+	chatSummaryHandler := handler.NewChatSummaryHandler(userService, vectorService, permissionsService)
+
+	mux := http.NewServeMux()
+	mux.Handle("/api/v1/chat/summary", slaMiddleware(&cfg, chatSummaryHandler))
+	mux.HandleFunc("/health", healthCheckHandler)
+
+	httpServer := &http.Server{
+		Addr:         fmt.Sprintf(":%s", cfg.App.Port),
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
+	go func() {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+		<-sigChan
+
+		log.Println("Shutting down server...")
+		shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			log.Printf("HTTP server shutdown error: %v", err)
+		}
+	}()
+
+	log.Printf("%s starting on :%s", cfg.App.ServiceName, cfg.App.Port)
+	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("HTTP server failed: %v", err)
+	}
+
+	log.Println("Server stopped")
+}
+
+func slaMiddleware(cfg *config.ServiceConfig, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), cfg.GetRequestTimeout())
+		defer cancel()
+
+		done := make(chan struct{})
+		go func() {
+			next.ServeHTTP(w, r.WithContext(ctx))
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			return
+		case <-ctx.Done():
+			if ctx.Err() == context.DeadlineExceeded {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusServiceUnavailable)
+				fmt.Fprintf(w, `{"error":"SLA timeout exceeded","max_response_time_ms":%d}`, cfg.SLA.MaxResponseTimeMs)
+			}
+		}
+	})
+}
+
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"status":"healthy","timestamp":"%s"}`, time.Now().Format(time.RFC3339))
+}

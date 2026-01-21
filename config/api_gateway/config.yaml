@@ -1,0 +1,20 @@
+app:
+  env: "development"
+  port: "8080"
+  log_level: "info"
+  service_name: "api_gateway"
+
+sla:
+  max_response_time_ms: 200
+  request_timeout_ms: 190
+
+grpc:
+  user_service: "localhost:9091"
+  vector_service: "localhost:9092"
+  permissions_service: "localhost:9093"
+  timeout_ms: 150
+
+degradation:
+  user_timeout_ms: 10
+  vector_timeout_ms: 180
+  permissions_timeout_ms: 50
