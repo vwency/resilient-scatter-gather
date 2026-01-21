@@ -9,3 +9,11 @@ make run
 ```
 make tests
 ```
+
+### tech stack
+- mockery
+- testify/mock
+- http
+- golang
+- viper/cfg
+- protobuff
