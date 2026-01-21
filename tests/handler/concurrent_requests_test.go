@@ -19,9 +19,9 @@ import (
 )
 
 func TestServeHTTP_MultipleConcurrentRequests_AllSucceed(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{UserId: "user123", Username: "testuser"}
 	mockUser.On("GetUser", mock.Anything, "user123").Return(userResp, nil).Run(func(args mock.Arguments) {
@@ -67,9 +67,9 @@ func TestServeHTTP_MultipleConcurrentRequests_AllSucceed(t *testing.T) {
 }
 
 func TestServeHTTP_ConcurrentRequestsWithDegradation_HandleCorrectly(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{UserId: "user123"}
 	mockUser.On("GetUser", mock.Anything, "user123").Return(userResp, nil).Run(func(args mock.Arguments) {
@@ -119,9 +119,9 @@ func TestServeHTTP_ConcurrentRequestsWithDegradation_HandleCorrectly(t *testing.
 }
 
 func TestServeHTTP_ConcurrentRequestsMixedScenarios_HandleCorrectly(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{UserId: "user123"}
 	mockUser.On("GetUser", mock.Anything, mock.Anything).Return(userResp, nil).Run(func(args mock.Arguments) {

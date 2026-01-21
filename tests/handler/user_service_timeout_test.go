@@ -18,9 +18,9 @@ import (
 )
 
 func TestServeHTTP_UserServiceTimeout_ReturnsInternalServerError(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	mockUser.On("GetUser", mock.Anything, "user123").Return(nil, context.DeadlineExceeded).Run(func(args mock.Arguments) {
 		time.Sleep(300 * time.Millisecond)
@@ -55,9 +55,9 @@ func TestServeHTTP_UserServiceTimeout_ReturnsInternalServerError(t *testing.T) {
 }
 
 func TestServeHTTP_UserServiceSlowButWithinSLA_ReturnsSuccess(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{
 		UserId:   "user123",

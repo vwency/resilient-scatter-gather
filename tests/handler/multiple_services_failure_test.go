@@ -19,9 +19,9 @@ import (
 )
 
 func TestServeHTTP_UserAndVectorServicesFail_ReturnsInternalServerError(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	mockUser.On("GetUser", mock.Anything, "user123").Return(nil, errors.New("user service down"))
 
@@ -43,9 +43,9 @@ func TestServeHTTP_UserAndVectorServicesFail_ReturnsInternalServerError(t *testi
 }
 
 func TestServeHTTP_PermissionsAndVectorServicesFail_ReturnsInternalServerError(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{UserId: "user123"}
 	mockUser.On("GetUser", mock.Anything, "user123").Return(userResp, nil)
@@ -68,9 +68,9 @@ func TestServeHTTP_PermissionsAndVectorServicesFail_ReturnsInternalServerError(t
 }
 
 func TestServeHTTP_AllServicesFail_ReturnsInternalServerError(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	mockUser.On("GetUser", mock.Anything, "user123").Return(nil, errors.New("user service down"))
 
@@ -94,9 +94,9 @@ func TestServeHTTP_AllServicesFail_ReturnsInternalServerError(t *testing.T) {
 }
 
 func TestServeHTTP_UserAndPermissionsTimeout_ReturnsInternalServerError(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	mockUser.On("GetUser", mock.Anything, "user123").Return(nil, context.DeadlineExceeded).Run(func(args mock.Arguments) {
 		time.Sleep(300 * time.Millisecond)
@@ -121,9 +121,9 @@ func TestServeHTTP_UserAndPermissionsTimeout_ReturnsInternalServerError(t *testi
 }
 
 func TestServeHTTP_CriticalServicesFailVectorSucceeds_ReturnsInternalServerError(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	mockUser.On("GetUser", mock.Anything, "user123").Return(nil, errors.New("user service down"))
 

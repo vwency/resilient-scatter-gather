@@ -17,9 +17,9 @@ import (
 )
 
 func TestServeHTTP_UserServiceError_ReturnsInternalServerError(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	mockUser.On("GetUser", mock.Anything, "user123").Return(nil, errors.New("user service down"))
 
@@ -48,9 +48,9 @@ func TestServeHTTP_UserServiceError_ReturnsInternalServerError(t *testing.T) {
 }
 
 func TestServeHTTP_UserServiceError_OtherServicesNotAffected(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	mockUser.On("GetUser", mock.Anything, "user123").Return(nil, errors.New("database connection failed")).Run(func(args mock.Arguments) {
 		time.Sleep(5 * time.Millisecond)

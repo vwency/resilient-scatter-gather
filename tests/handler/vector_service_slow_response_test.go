@@ -17,9 +17,9 @@ import (
 )
 
 func TestServeHTTP_VectorServiceSlowButSuccessful_ReturnsWithData(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{
 		UserId:   "user123",
@@ -68,9 +68,9 @@ func TestServeHTTP_VectorServiceSlowButSuccessful_ReturnsWithData(t *testing.T) 
 }
 
 func TestServeHTTP_VectorServiceBarelySlow_ReturnsWithData(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{UserId: "user123"}
 	mockUser.On("GetUser", mock.Anything, "user123").Return(userResp, nil).Run(func(args mock.Arguments) {
@@ -114,9 +114,9 @@ func TestServeHTTP_VectorServiceBarelySlow_ReturnsWithData(t *testing.T) {
 }
 
 func TestServeHTTP_VectorServiceVerySlowButNoTimeout_ReturnsWithData(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{UserId: "user123"}
 	mockUser.On("GetUser", mock.Anything, "user123").Return(userResp, nil).Run(func(args mock.Arguments) {

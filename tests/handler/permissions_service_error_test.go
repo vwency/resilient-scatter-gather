@@ -17,9 +17,9 @@ import (
 )
 
 func TestServeHTTP_PermissionsServiceError_ReturnsInternalServerError(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{UserId: "user123"}
 	mockUser.On("GetUser", mock.Anything, "user123").Return(userResp, nil)
@@ -49,9 +49,9 @@ func TestServeHTTP_PermissionsServiceError_ReturnsInternalServerError(t *testing
 }
 
 func TestServeHTTP_PermissionsServiceError_DatabaseFailure(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{
 		UserId:   "user123",

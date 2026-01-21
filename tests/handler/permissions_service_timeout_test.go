@@ -18,9 +18,9 @@ import (
 )
 
 func TestServeHTTP_PermissionsServiceTimeout_ReturnsInternalServerError(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{
 		UserId:   "user123",
@@ -58,9 +58,9 @@ func TestServeHTTP_PermissionsServiceTimeout_ReturnsInternalServerError(t *testi
 }
 
 func TestServeHTTP_PermissionsServiceSlowButWithinSLA_ReturnsSuccess(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	userResp := &pb_user.GetUserResponse{
 		UserId:   "user123",

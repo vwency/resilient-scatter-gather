@@ -13,9 +13,9 @@ import (
 )
 
 func TestServeHTTP_MissingUserID_ReturnsBadRequest(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	h := handler.NewChatSummaryHandler(mockUser, mockVector, mockPermissions, 200*time.Millisecond)
 
@@ -34,9 +34,9 @@ func TestServeHTTP_MissingUserID_ReturnsBadRequest(t *testing.T) {
 }
 
 func TestServeHTTP_MissingChatID_ReturnsBadRequest(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	h := handler.NewChatSummaryHandler(mockUser, mockVector, mockPermissions, 200*time.Millisecond)
 
@@ -55,9 +55,9 @@ func TestServeHTTP_MissingChatID_ReturnsBadRequest(t *testing.T) {
 }
 
 func TestServeHTTP_MissingBothParameters_ReturnsBadRequest(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	h := handler.NewChatSummaryHandler(mockUser, mockVector, mockPermissions, 200*time.Millisecond)
 
@@ -75,9 +75,9 @@ func TestServeHTTP_MissingBothParameters_ReturnsBadRequest(t *testing.T) {
 }
 
 func TestServeHTTP_EmptyUserID_ReturnsBadRequest(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	h := handler.NewChatSummaryHandler(mockUser, mockVector, mockPermissions, 200*time.Millisecond)
 
@@ -95,9 +95,9 @@ func TestServeHTTP_EmptyUserID_ReturnsBadRequest(t *testing.T) {
 }
 
 func TestServeHTTP_EmptyChatID_ReturnsBadRequest(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	h := handler.NewChatSummaryHandler(mockUser, mockVector, mockPermissions, 200*time.Millisecond)
 
@@ -115,9 +115,9 @@ func TestServeHTTP_EmptyChatID_ReturnsBadRequest(t *testing.T) {
 }
 
 func TestServeHTTP_InvalidMethod_ReturnsMethodNotAllowed(t *testing.T) {
-	mockUser := new(UserServiceClient)
-	mockPermissions := new(PermissionsServiceClient)
-	mockVector := new(VectorMemoryServiceClient)
+	mockUser := new(UserService)
+	mockPermissions := new(PermissionsService)
+	mockVector := new(VectorMemoryService)
 
 	h := handler.NewChatSummaryHandler(mockUser, mockVector, mockPermissions, 200*time.Millisecond)
 
