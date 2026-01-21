@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -36,4 +37,28 @@ func Init(env, servicePath string, cfg any) {
 	}
 
 	fmt.Printf("[CONFIG] Loaded config: %s\n", viper.ConfigFileUsed())
+}
+
+func (c *ServiceConfig) GetSLATimeout() time.Duration {
+	return time.Duration(c.SLA.MaxResponseTimeMs) * time.Millisecond
+}
+
+func (c *ServiceConfig) GetRequestTimeout() time.Duration {
+	return time.Duration(c.SLA.RequestTimeoutMs) * time.Millisecond
+}
+
+func (c *ServiceConfig) GetGrpcTimeout() time.Duration {
+	return time.Duration(c.Grpc.TimeoutMs) * time.Millisecond
+}
+
+func (c *ServiceConfig) GetUserDegradationTimeout() time.Duration {
+	return time.Duration(c.Degradation.UserTimeoutMs) * time.Millisecond
+}
+
+func (c *ServiceConfig) GetVectorDegradationTimeout() time.Duration {
+	return time.Duration(c.Degradation.VectorTimeoutMs) * time.Millisecond
+}
+
+func (c *ServiceConfig) GetPermissionsDegradationTimeout() time.Duration {
+	return time.Duration(c.Degradation.PermissionsTimeoutMs) * time.Millisecond
 }
