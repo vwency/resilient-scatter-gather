@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var _ UserService = (*UserServiceClient)(nil)
+
 type UserServiceClient struct {
 	client             pb.UserServiceClient
 	degradationTimeout time.Duration

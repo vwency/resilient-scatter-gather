@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var _ PermissionsService = (*PermissionsServiceClient)(nil)
+
 type PermissionsServiceClient struct {
 	client             pb.PermissionsServiceClient
 	degradationTimeout time.Duration

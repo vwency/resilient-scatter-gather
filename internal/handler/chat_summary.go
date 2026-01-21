@@ -9,34 +9,23 @@ import (
 	"time"
 
 	"github.com/vwency/resilient-scatter-gather/internal/models"
+	"github.com/vwency/resilient-scatter-gather/internal/services"
 	pb_permissions "github.com/vwency/resilient-scatter-gather/proto/permissions"
 	pb_user "github.com/vwency/resilient-scatter-gather/proto/user"
 	pb_vector "github.com/vwency/resilient-scatter-gather/proto/vector"
 )
 
-type UserServiceClient interface {
-	GetUser(ctx context.Context, userID string) (*pb_user.GetUserResponse, error)
-}
-
-type PermissionsServiceClient interface {
-	CheckAccess(ctx context.Context, userID, resourceID string) (*pb_permissions.CheckAccessResponse, error)
-}
-
-type VectorMemoryServiceClient interface {
-	GetContext(ctx context.Context, chatID string) (*pb_vector.GetContextResponse, error)
-}
-
 type ChatSummaryHandler struct {
-	userService        UserServiceClient
-	vectorService      VectorMemoryServiceClient
-	permissionsService PermissionsServiceClient
+	userService        services.UserService
+	vectorService      services.VectorMemoryService
+	permissionsService services.PermissionsService
 	slaTimeout         time.Duration
 }
 
 func NewChatSummaryHandler(
-	userService UserServiceClient,
-	vectorService VectorMemoryServiceClient,
-	permissionsService PermissionsServiceClient,
+	userService services.UserService,
+	vectorService services.VectorMemoryService,
+	permissionsService services.PermissionsService,
 	slaTimeout time.Duration,
 ) *ChatSummaryHandler {
 	return &ChatSummaryHandler{

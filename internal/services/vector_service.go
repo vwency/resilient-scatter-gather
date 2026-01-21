@@ -7,6 +7,8 @@ import (
 	pb "github.com/vwency/resilient-scatter-gather/proto/vector"
 )
 
+var _ VectorMemoryService = (*VectorMemoryServiceClient)(nil)
+
 type VectorMemoryServiceClient struct {
 	client             pb.VectorMemoryServiceClient
 	degradationTimeout time.Duration
