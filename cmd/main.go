@@ -57,19 +57,27 @@ func main() {
 		pb_user.NewUserServiceClient(userConn),
 		cfg.GetUserDegradationTimeout(),
 	)
+
 	vectorService := services.NewVectorMemoryServiceClient(
 		pb_vector.NewVectorMemoryServiceClient(vectorConn),
 		cfg.GetVectorDegradationTimeout(),
 	)
+
 	permissionsService := services.NewPermissionsServiceClient(
 		pb_permissions.NewPermissionsServiceClient(permissionsConn),
 		cfg.GetPermissionsDegradationTimeout(),
 	)
 
-	chatSummaryHandler := handler.NewChatSummaryHandler(userService, vectorService, permissionsService)
+	slaTimeout := time.Duration(cfg.SLA.MaxResponseTimeMs) * time.Millisecond
+	chatSummaryHandler := handler.NewChatSummaryHandler(
+		userService,
+		vectorService,
+		permissionsService,
+		slaTimeout,
+	)
 
 	mux := http.NewServeMux()
-	mux.Handle("/api/v1/chat/summary", slaMiddleware(&cfg, chatSummaryHandler))
+	mux.Handle("/api/v1/chat/summary", chatSummaryHandler)
 	mux.HandleFunc("/health", healthCheckHandler)
 
 	httpServer := &http.Server{
@@ -94,36 +102,12 @@ func main() {
 		}
 	}()
 
-	log.Printf("%s starting on :%s", cfg.App.ServiceName, cfg.App.Port)
+	log.Printf("%s starting on :%s (SLA: %dms)", cfg.App.ServiceName, cfg.App.Port, cfg.SLA.MaxResponseTimeMs)
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("HTTP server failed: %v", err)
 	}
 
 	log.Println("Server stopped")
-}
-
-func slaMiddleware(cfg *config.ServiceConfig, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), cfg.GetRequestTimeout())
-		defer cancel()
-
-		done := make(chan struct{})
-		go func() {
-			next.ServeHTTP(w, r.WithContext(ctx))
-			close(done)
-		}()
-
-		select {
-		case <-done:
-			return
-		case <-ctx.Done():
-			if ctx.Err() == context.DeadlineExceeded {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusServiceUnavailable)
-				fmt.Fprintf(w, `{"error":"SLA timeout exceeded","max_response_time_ms":%d}`, cfg.SLA.MaxResponseTimeMs)
-			}
-		}
-	})
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
