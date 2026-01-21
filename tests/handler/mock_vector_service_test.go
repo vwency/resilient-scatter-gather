@@ -15,6 +15,14 @@ type VectorMemoryService struct {
 	mock.Mock
 }
 
+type VectorMemoryService_Expecter struct {
+	mock *mock.Mock
+}
+
+func (_m *VectorMemoryService) EXPECT() *VectorMemoryService_Expecter {
+	return &VectorMemoryService_Expecter{mock: &_m.Mock}
+}
+
 // GetContext provides a mock function with given fields: ctx, chatID
 func (_m *VectorMemoryService) GetContext(ctx context.Context, chatID string) (*vector.GetContextResponse, error) {
 	ret := _m.Called(ctx, chatID)
@@ -43,6 +51,35 @@ func (_m *VectorMemoryService) GetContext(ctx context.Context, chatID string) (*
 	}
 
 	return r0, r1
+}
+
+// VectorMemoryService_GetContext_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetContext'
+type VectorMemoryService_GetContext_Call struct {
+	*mock.Call
+}
+
+// GetContext is a helper method to define mock.On call
+//   - ctx context.Context
+//   - chatID string
+func (_e *VectorMemoryService_Expecter) GetContext(ctx interface{}, chatID interface{}) *VectorMemoryService_GetContext_Call {
+	return &VectorMemoryService_GetContext_Call{Call: _e.mock.On("GetContext", ctx, chatID)}
+}
+
+func (_c *VectorMemoryService_GetContext_Call) Run(run func(ctx context.Context, chatID string)) *VectorMemoryService_GetContext_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *VectorMemoryService_GetContext_Call) Return(_a0 *vector.GetContextResponse, _a1 error) *VectorMemoryService_GetContext_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *VectorMemoryService_GetContext_Call) RunAndReturn(run func(context.Context, string) (*vector.GetContextResponse, error)) *VectorMemoryService_GetContext_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // NewVectorMemoryService creates a new instance of VectorMemoryService. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
