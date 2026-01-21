@@ -1,0 +1,28 @@
+version: "3"
+
+vars:
+  GO_MODULE_PATH: "github.com/vwency/microservices_golang/"
+
+tasks:
+  run-gateway:
+    desc: Run client
+    cmds:
+      - go run ./cmd/main.go
+
+  tests:
+    desc: Run tests
+    cmds:
+      - go test .\tests\handler -v
+
+  proto-generate:
+    desc: Generate gRPC code from proto
+    cmds:
+      - protoc --proto_path=./proto --go_out=./proto --go-grpc_out=./proto --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative ./proto/**/*.proto
+
+  clean-unused-deps:
+    desc: Remove unnecessary dependencies from go.mod and go.sum
+    cmds:
+      - go mod tidy
+      - go mod vendor
+      - go mod verify
+      - echo "Unused dependencies removed successfully"
