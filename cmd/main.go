@@ -68,7 +68,7 @@ func main() {
 		cfg.GetPermissionsDegradationTimeout(),
 	)
 
-	slaTimeout := time.Duration(cfg.SLA.MaxResponseTimeMs) * time.Millisecond
+	slaTimeout := time.Duration(cfg.TTL.MaxResponseTimeMs) * time.Millisecond
 	chatSummaryHandler := handler.NewChatSummaryHandler(
 		userService,
 		vectorService,
@@ -107,7 +107,7 @@ func main() {
 	}()
 
 	addr := fmt.Sprintf(":%s", cfg.App.Port)
-	log.Printf("%s starting on %s (SLA: %dms)", cfg.App.ServiceName, addr, cfg.SLA.MaxResponseTimeMs)
+	log.Printf("%s starting on %s (SLA: %dms)", cfg.App.ServiceName, addr, cfg.TTL.MaxResponseTimeMs)
 
 	if err := server.ListenAndServe(addr); err != nil {
 		log.Fatalf("HTTP server failed: %v", err)

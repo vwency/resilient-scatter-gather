@@ -7,10 +7,10 @@ type ServiceConfig struct {
 		LogLevel    string `mapstructure:"log_level"`
 		ServiceName string `mapstructure:"service_name"`
 	} `mapstructure:"app"`
-	SLA struct {
+	TTL struct {
 		MaxResponseTimeMs int `mapstructure:"max_response_time_ms"`
 		RequestTimeoutMs  int `mapstructure:"request_timeout_ms"`
-	} `mapstructure:"sla"`
+	} `mapstructure:"ttl"`
 	Grpc struct {
 		UserService        string `mapstructure:"user_service"`
 		VectorService      string `mapstructure:"vector_service"`

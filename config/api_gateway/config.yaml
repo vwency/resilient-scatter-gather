@@ -4,7 +4,7 @@ app:
   log_level: "info"
   service_name: "api_gateway"
 
-sla:
+ttl:
   max_response_time_ms: 200
   request_timeout_ms: 190
 

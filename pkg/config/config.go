@@ -40,11 +40,11 @@ func Init(env, servicePath string, cfg any) {
 }
 
 func (c *ServiceConfig) GetSLATimeout() time.Duration {
-	return time.Duration(c.SLA.MaxResponseTimeMs) * time.Millisecond
+	return time.Duration(c.TTL.MaxResponseTimeMs) * time.Millisecond
 }
 
 func (c *ServiceConfig) GetRequestTimeout() time.Duration {
-	return time.Duration(c.SLA.RequestTimeoutMs) * time.Millisecond
+	return time.Duration(c.TTL.RequestTimeoutMs) * time.Millisecond
 }
 
 func (c *ServiceConfig) GetGrpcTimeout() time.Duration {
